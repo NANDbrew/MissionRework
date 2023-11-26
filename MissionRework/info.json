@@ -1,0 +1,7 @@
+﻿{
+  "Id": "MissionRework",
+  "DisplayName": "Mission Rework",
+  "Author": "NANDbrew",
+  "Version": "0.0.1",
+  "EntryMethod": "MissionRework.Main.Load"
+}
