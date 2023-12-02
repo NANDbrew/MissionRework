@@ -20,7 +20,6 @@ namespace MissionRework
     internal static class Main
     {
         public static ModSettings settings;
-        public static UnityModManager.ModEntry.ModLogger logger;
 
         static bool Load(UnityModManager.ModEntry modEntry)
         {
@@ -28,8 +27,6 @@ namespace MissionRework
             harmony.PatchAll(Assembly.GetExecutingAssembly());
 
             settings = UnityModManager.ModSettings.Load<ModSettings>(modEntry);
-            logger = modEntry.Logger;
-            Utilities.SetLogger(modEntry.Logger);
 
             // uncomment if using settings
             //modEntry.OnGUI = OnGUI;

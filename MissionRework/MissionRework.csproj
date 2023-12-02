@@ -41,8 +41,9 @@
       <HintPath>C:\Program Files (x86)\Steam\steamapps\common\Sailwind\Sailwind_Data\Managed\Assembly-CSharp-firstpass.dll</HintPath>
     </Reference>
     <Reference Include="Microsoft.CSharp" />
-    <Reference Include="SailwindModdingHelper">
-      <HintPath>..\..\SailwindModdingHelper\SailwindModdingHelper\bin\Release\SailwindModdingHelper.dll</HintPath>
+    <Reference Include="SailwindModdingHelper, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\..\..\Desktop\Sailwind\Mods\SailwindModdingHelper\SailwindModdingHelper.dll</HintPath>
     </Reference>
     <Reference Include="System">
       <HintPath>C:\Program Files (x86)\Steam\steamapps\common\Sailwind\Sailwind_Data\Managed\System.dll</HintPath>
@@ -65,10 +66,10 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="GPMissionTypeButton.cs" />
     <Compile Include="Main.cs" />
     <Compile Include="MissionPatches.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="Utilities.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="info.json">
@@ -77,16 +78,7 @@
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
-    <PostBuildEvent>set "steamdir=C:\Users\Craig\Desktop\Sailwind\Mods\$(TargetName)\"
-
-
-mkdir %25steamdir%25
-
-
-copy $(TargetFileName) %25steamdir%25\
-
-
-copy info.json %25steamdir%25\
-</PostBuildEvent>
+    <PostBuildEvent>
+    </PostBuildEvent>
   </PropertyGroup>
 </Project>

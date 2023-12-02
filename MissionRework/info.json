@@ -2,6 +2,7 @@
   "Id": "MissionRework",
   "DisplayName": "Mission Rework",
   "Author": "NANDbrew",
-  "Version": "0.0.1",
-  "EntryMethod": "MissionRework.Main.Load"
+  "Version": "1.0.0",
+  "EntryMethod": "MissionRework.Main.Load",
+  "Requirements": ["SailwindModdingHelper"]
 }
