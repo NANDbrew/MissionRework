@@ -4,12 +4,9 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using HarmonyLib;
-using UnityModManagerNet;
 using UnityEngine;
-using static UnityEngine.GraphicsBuffer;
 using SailwindModdingHelper;
 using System.ComponentModel;
-using static UnityModManagerNet.UnityModManager;
 using System.Net.Mail;
 //using UnityEngine.TextRenderingModule;
 
@@ -19,6 +16,7 @@ namespace MissionRework
     {
         private static GameObject sortButton;
         private static GameObject backButton;
+        private static GameObject acceptCancelButton;
 
         public static int currentPortIndex;
         public static Dictionary<int, List<Good>> portLists = new Dictionary<int, List<Good>>();
@@ -46,7 +44,7 @@ namespace MissionRework
             {
                 sortButton.SetActive(false);
                 backButton.SetActive(false);
-
+                acceptCancelButton.SetActive(false);
                 return true;
             }
         }
@@ -139,6 +137,17 @@ namespace MissionRework
                         }
                     }
                 }
+                foreach (Transform item in ___UI.transform)
+                {
+                    foreach (Transform item2 in item)
+                    {
+                        if (item2.name == "accept/cancel button")
+                        {
+                            acceptCancelButton = item2.gameObject;
+                        }
+
+                    }
+                }
             }
 
 
@@ -172,22 +181,41 @@ namespace MissionRework
                                 }
                                 else i++;
                             }
-                            if (!(___currentMission.GetDeliveredCount() < ___currentMission.goodCount))
+                            int num = ___currentMission.goodCount - ___currentMission.GetDeliveredCount();
+                            if (num > 0)
                             {
-                                MissionListUI.instance.RefreshList();
+                                int num2 = num * 100;
+                                ___currentMission.AbandonMission();
+                                NotificationUi.instance.ShowNotification("Ended mission:\n" + ___currentMission.missionName + "\nReputation penalty: " + num2);
+                                UISoundPlayer.instance.PlayWritingSound();
+                                PlayerMissions.missions[___currentMission.missionIndex] = null;
+
+                                MissionLog.instance.loggedMissions[0].totalRep -= num2;
+                                MissionLog.instance.UpdateTexts();
+
+                                //List<string> texts = new List<string>(MissionLog.instance.texts[0].text.Split(')'));
+                                //texts.Insert(1, "/" + ___currentMission.goodCount + ")");
+                                //MissionLog.instance.texts[0].text = string.Join("", texts);
                             }
+
+                            MissionListUI.instance.RefreshList();
+                            //___currentMission = null;
+                            __instance.InvokePrivateMethod("UpdateTexts");
+                            MissionListUI.instance.GetPrivateField<GameObject>("book").SetActive(false);
+                            MissionListUI.instance.GetPrivateField<PortDude>("currentPortDude").ActivateMissionListUI(false);
                         }
-                        __instance.InvokePrivateMethod("UpdateTexts");
-                        MissionListUI.instance.GetPrivateField<GameObject>("book").SetActive(false);
-                        MissionListUI.instance.GetPrivateField<PortDude>("currentPortDude").ActivateMissionListUI(false);
+
                         return false;
                     }
                     else
                     {
                         PlayerMissions.AbandonMission(___currentMission.missionIndex);
                         MissionListUI.instance.RefreshList();
-                        ___UI.SetActive(value: false);
-                    }                
+                        MissionListUI.instance.GetPrivateField<GameObject>("book").SetActive(false);
+                        MissionListUI.instance.GetPrivateField<PortDude>("currentPortDude").ActivateMissionListUI(false);
+
+                        //___UI.SetActive(value: false);
+                    }
                 }
                 return false;
             }
@@ -203,29 +231,31 @@ namespace MissionRework
                 if (___currentMission.missionIndex != -1 && missionGoodsInArea.Count > 0 && (MissionListUI.instance.GetPrivateField<PortDude>("currentPortDude") != null))
                 {
                     ___amount.text = ___currentMission.GetDeliveredCount() + " / " + ___amount.text;
-                    if (currentPortIndex == missionPortIndex)
+                    int currentMissionGoodsInArea = 0;
+                    foreach (var component in missionGoodsInArea)
                     {
-                        int currentMissionGoodsInArea = 0;
-                        foreach (var component in missionGoodsInArea)
+                        if (___currentMission == component.GetAssignedMission())
                         {
-                            if (___currentMission == component.GetAssignedMission())
-                            {
-                                currentMissionGoodsInArea++;
-                            }
+                            currentMissionGoodsInArea++;
                         }
-                        if (currentMissionGoodsInArea > 0)
+                    }
+
+                    if (currentMissionGoodsInArea > 0)
+                    {                    
+                        if (currentPortIndex == missionPortIndex)
                         {
-                            if (currentMissionGoodsInArea < ___currentMission.goodCount) ___buttonText.text = "Deliver\n" + "( " + currentMissionGoodsInArea + " )";
+                            if (currentMissionGoodsInArea < ___currentMission.goodCount) ___buttonText.text = "Deliver\n" + "partial (" + currentMissionGoodsInArea + ")";
                             if (currentMissionGoodsInArea >= ___currentMission.goodCount) ___buttonText.text = "Deliver all";
                             ___clickable = true;
                             return;
                         }
-                        ___buttonText.text = "(no goods\nin area)";
+                    /*    ___buttonText.text = "(wrong port)";
                         ___clickable = false;
-                        return;
+                        return;*/
                     }
-                    ___buttonText.text = "(wrong port)";
+                  /*  ___buttonText.text = "(no goods\nin area)";
                     ___clickable = false;
+                    return;*/
                 }
             }
         }
@@ -242,17 +272,8 @@ namespace MissionRework
                     GPMissionTypeButton.portDude = __instance;
                     sortButton.SetActive(true);
                     backButton.SetActive(true);
-/*                    if (portLists[currentPortIndex].Count > 0)
-                    {
-                        GPMissionTypeButton.missionType = MissionType.Active;
-                        //sortButton.GetComponent<GPMissionTypeButton>().OnActivate();
-                        //sortButton.GetComponent<GPMissionTypeButton>().text.text = "Showing: Active";
-                    }
-                    else
-                    {
-                        GPMissionTypeButton.missionType = MissionType.Available;
-                        //MissionListUI.instance.EnablePortMissionUI(___port.GetMissions(0, false), ___missionTable, __instance);
-                    }*/
+                    acceptCancelButton.SetActive(true);
+
                     GPMissionTypeButton.UpdateMissions();
                     //sortButton.GetComponent<GPMissionTypeButton>().UpdateText();
                     return false;
@@ -274,6 +295,22 @@ namespace MissionRework
             [HarmonyPatch("OnTriggerEnter")]
             public static bool OnTriggerEnter()
             {
+                return false;
+            }
+        }
+
+        [HarmonyPatch(typeof(PlayerMissions))]
+        private static class PlayerMissionsPatches
+        {
+            [HarmonyPrefix]
+            [HarmonyPatch("AbandonMission")]
+            public static bool AbandonMissionPatch(int missionIndex)
+            {
+                int repPenalty = -100 * (PlayerMissions.missions[missionIndex].goodCount - PlayerMissions.missions[missionIndex].GetDeliveredCount());
+                PlayerMissions.missions[missionIndex].destinationPort.IncreaseDemand(PlayerMissions.missions[missionIndex]);
+                PlayerMissions.missions[missionIndex].AbandonMission();
+                NotificationUi.instance.ShowNotification("Abandoning mission:\n" + PlayerMissions.missions[missionIndex].missionName + "\n" + repPenalty + " reputation");
+                PlayerMissions.missions[missionIndex] = null;
                 return false;
             }
         }

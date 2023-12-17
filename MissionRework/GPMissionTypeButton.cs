@@ -55,7 +55,6 @@ namespace MissionRework
                         //MissionListUI.instance.SetPrivateField("currentPageCount", 1);
                         MissionListUI.instance.GetPrivateField<GameObject>("pageButtons").SetActive(false);
                         //MissionListUI.instance.GetPrivateField<GameObject>("sort button").SetActive(true);
-                        //MissionListUI.instance.InvokePrivateMethod("UpdatePageCountText");
                         //MissionDetailsUI.instance.GetPrivateField<GameObject>("UI").SetActive(true);
                         MissionListUI.instance.SetPrivateField("closeCooldown", 0f);
                         return;
@@ -66,6 +65,7 @@ namespace MissionRework
                         MissionListUI.instance.EnablePortMissionUI(currentPort.GetPrivateField<Mission[]>("missions"), portDude.GetPrivateField<Transform>("missionTable"), portDude);
                         MissionListUI.instance.ChangePage(0);
                         MissionListUI.instance.SetPrivateField("closeCooldown", 0f);
+                        MissionListUI.instance.InvokePrivateMethod("UpdatePageCountText");
 
                         return;
                     }
