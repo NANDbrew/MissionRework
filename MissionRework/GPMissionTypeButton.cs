@@ -9,7 +9,7 @@ using UnityEngine;
 
 namespace MissionRework
 {
-    internal enum MissionType
+    public enum MissionType
     {
         Available,
         Active,

@@ -207,12 +207,14 @@ namespace MissionRework
 
                         return false;
                     }
-                    else
+                    if (GPMissionTypeButton.missionType == MissionType.Active)
                     {
                         PlayerMissions.AbandonMission(___currentMission.missionIndex);
                         MissionListUI.instance.RefreshList();
                         MissionListUI.instance.GetPrivateField<GameObject>("book").SetActive(false);
                         MissionListUI.instance.GetPrivateField<PortDude>("currentPortDude").ActivateMissionListUI(false);
+
+                        Debug.Log("Button Clicked!");
 
                         //___UI.SetActive(value: false);
                     }
