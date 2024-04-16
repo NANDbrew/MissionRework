@@ -20,6 +20,7 @@ namespace MissionRework
 
         public static int currentPortIndex;
         public static Dictionary<int, List<Good>> portLists = new Dictionary<int, List<Good>>();
+        private static IslandMarket currentMarket;
 
         [HarmonyPatch(typeof(MissionListUI))]
         private class MissionListUIPatches
@@ -69,6 +70,7 @@ namespace MissionRework
             public static void OnTriggerEnterPatch(IslandMarketWarehouseArea __instance, Collider other, IslandMarket ___market)
             {
                 currentPortIndex = ___market.GetPortIndex();
+                currentMarket = ___market;
 
                 if (!portLists.ContainsKey(currentPortIndex))
                 {
@@ -79,7 +81,7 @@ namespace MissionRework
 
                 List<Good> missionGoodsInArea = portLists[currentPortIndex];
 
-                if ((bool)component && !missionGoodsInArea.Contains(component) && !(component.GetMissionIndex() == -1))
+                if ((bool)component && !missionGoodsInArea.Contains(component) && component.GetMissionIndex() != -1)
                 {
                     missionGoodsInArea.Add(component);
                 }
@@ -91,6 +93,8 @@ namespace MissionRework
             public static void OnTriggerExitPatch(IslandMarketWarehouseArea __instance, Collider other, IslandMarket ___market)
             {
                 currentPortIndex = ___market.GetPortIndex();
+                currentMarket = ___market;
+
                 List<Good> missionGoodsInArea = portLists[currentPortIndex];
 
                 Good component = other.GetComponent<Good>();
@@ -153,24 +157,17 @@ namespace MissionRework
 
             [HarmonyPrefix]
             [HarmonyPatch("ClickButton")]
-            public static bool ClickButton(MissionDetailsUI __instance, bool ___clickable, bool ___mapZoomedIn, ref Mission ___currentMission, ref GameObject ___UI)
+            public static bool ClickButton(MissionDetailsUI __instance, ref bool ___clickable, bool ___mapZoomedIn, ref Mission ___currentMission, ref GameObject ___UI, ref TextMesh ___buttonText)
             {
                 int missionPortIndex = ___currentMission.destinationPort.portIndex;
                 List<Good> missionGoodsInArea = portLists[missionPortIndex];
+                if (GPMissionTypeButton.missionType == MissionType.Available) return true;
 
-                if (___clickable && !___mapZoomedIn)
-                {                
-                    if (___currentMission.missionIndex == -1)
+                if (!___mapZoomedIn && ___currentMission.missionIndex != -1)
+                {
+                    if (___clickable)
                     {
-                        PlayerMissions.AcceptMission(___currentMission);
-                        MissionListUI.instance.DisplayMissions(___currentMission.originPort.GetMissions(0, MissionListUI.instance.worldMissions));
-                        ___UI.SetActive(value: false);
-                        __instance.InvokePrivateMethod("UpdateTexts");
-                        return false;
-                    }
-                    if (___currentMission.missionIndex != -1 && missionGoodsInArea.Count > 0)
-                    {
-                        if (currentPortIndex == missionPortIndex)
+                        if (currentPortIndex == missionPortIndex && missionGoodsInArea.Count > 0)
                         {
                             for (int i = 0; i < missionGoodsInArea.Count;)
                             {
@@ -203,20 +200,30 @@ namespace MissionRework
                             __instance.InvokePrivateMethod("UpdateTexts");
                             MissionListUI.instance.GetPrivateField<GameObject>("book").SetActive(false);
                             MissionListUI.instance.GetPrivateField<PortDude>("currentPortDude").ActivateMissionListUI(false);
+
+                            List<Good> list = (List<Good>)currentMarket.GetPrivateField("warehouseArea").GetPrivateField("goodsInArea");
+
+                            foreach (Good good in list) 
+                            {
+                                good.GetComponent<Rigidbody>().WakeUp();
+                            }
                         }
+                        else
+                        {
+                            PlayerMissions.AbandonMission(___currentMission.missionIndex);
+                            MissionListUI.instance.RefreshList();
+                            MissionListUI.instance.GetPrivateField<GameObject>("book").SetActive(false);
+                            MissionListUI.instance.GetPrivateField<PortDude>("currentPortDude").ActivateMissionListUI(false);
 
-                        return false;
+                            Debug.Log("Button Clicked!");
+
+                            //___UI.SetActive(value: false);
+                        }
                     }
-                    if (GPMissionTypeButton.missionType == MissionType.Active)
+                    else
                     {
-                        PlayerMissions.AbandonMission(___currentMission.missionIndex);
-                        MissionListUI.instance.RefreshList();
-                        MissionListUI.instance.GetPrivateField<GameObject>("book").SetActive(false);
-                        MissionListUI.instance.GetPrivateField<PortDude>("currentPortDude").ActivateMissionListUI(false);
-
-                        Debug.Log("Button Clicked!");
-
-                        //___UI.SetActive(value: false);
+                        ___buttonText.text = "Abandon";
+                        ___clickable = true;
                     }
                 }
                 return false;
@@ -230,7 +237,7 @@ namespace MissionRework
                 List<Good> missionGoodsInArea = portLists[currentPortIndex];
 
 
-                if (___currentMission.missionIndex != -1 && missionGoodsInArea.Count > 0 && (MissionListUI.instance.GetPrivateField<PortDude>("currentPortDude") != null))
+                if (___currentMission.missionIndex != -1 && (MissionListUI.instance.GetPrivateField<PortDude>("currentPortDude") != null))
                 {
                     ___amount.text = ___currentMission.GetDeliveredCount() + " / " + ___amount.text;
                     int currentMissionGoodsInArea = 0;
@@ -242,22 +249,26 @@ namespace MissionRework
                         }
                     }
 
-                    if (currentMissionGoodsInArea > 0)
+                    if (currentPortIndex == missionPortIndex)
                     {                    
-                        if (currentPortIndex == missionPortIndex)
+                        if (currentMissionGoodsInArea > 0)
                         {
                             if (currentMissionGoodsInArea < ___currentMission.goodCount) ___buttonText.text = "Deliver\n" + "partial (" + currentMissionGoodsInArea + ")";
                             if (currentMissionGoodsInArea >= ___currentMission.goodCount) ___buttonText.text = "Deliver all";
                             ___clickable = true;
-                            return;
                         }
-                    /*    ___buttonText.text = "(wrong port)";
-                        ___clickable = false;
-                        return;*/
+                        else if (Main.safety.Value)
+                        {
+                            ___buttonText.text = "(no goods\nin area)";
+                            ___clickable = false;
+                        }//return;
                     }
-                  /*  ___buttonText.text = "(no goods\nin area)";
-                    ___clickable = false;
-                    return;*/
+                    else if (Main.safety.Value)
+                    {
+                        ___buttonText.text = "(wrong port)";
+                        ___clickable = false;
+                    }
+                    //return;
                 }
             }
         }
