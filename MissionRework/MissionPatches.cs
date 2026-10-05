@@ -22,6 +22,19 @@ namespace MissionRework
         public static Dictionary<int, List<Good>> portLists = new Dictionary<int, List<Good>>();
         private static IslandMarket currentMarket;
 
+        private static int CountMissionGoods(List<Good> goods, Mission mission)
+        {
+            int count = 0;
+            foreach (Good good in goods)
+            {
+                if (good.GetAssignedMission() == mission)
+                {
+                    count++;
+                }
+            }
+            return count;
+        }
+
         [HarmonyPatch(typeof(MissionListUI))]
         private class MissionListUIPatches
         {
@@ -168,7 +181,7 @@ namespace MissionRework
                 {
                     if (___clickable)
                     {
-                        if (currentPortIndex == missionPortIndex && missionGoodsInArea.Count > 0)
+                        if (currentPortIndex == missionPortIndex && CountMissionGoods(missionGoodsInArea, ___currentMission) > 0)
                         {
                             for (int i = 0; i < missionGoodsInArea.Count;)
                             {
@@ -241,14 +254,7 @@ namespace MissionRework
                 if (___currentMission.missionIndex != -1 && (MissionListUI.instance.GetPrivateField<PortDude>("currentPortDude") != null))
                 {
                     ___amount.text = ___currentMission.GetDeliveredCount() + " / " + ___amount.text;
-                    int currentMissionGoodsInArea = 0;
-                    foreach (var component in missionGoodsInArea)
-                    {
-                        if (___currentMission == component.GetAssignedMission())
-                        {
-                            currentMissionGoodsInArea++;
-                        }
-                    }
+                    int currentMissionGoodsInArea = CountMissionGoods(missionGoodsInArea, ___currentMission);
 
                     if (currentPortIndex == missionPortIndex)
                     {                    
@@ -318,14 +324,18 @@ namespace MissionRework
         {
             [HarmonyPrefix]
             [HarmonyPatch("AbandonMission")]
-            public static bool AbandonMissionPatch(int missionIndex)
+            public static void AbandonMissionPatch(int missionIndex, out string __state)
             {
-                int repPenalty = -100 * (PlayerMissions.missions[missionIndex].goodCount - PlayerMissions.missions[missionIndex].GetDeliveredCount());
-                PlayerMissions.missions[missionIndex].destinationPort.IncreaseDemand(PlayerMissions.missions[missionIndex]);
-                PlayerMissions.missions[missionIndex].AbandonMission();
-                NotificationUi.instance.ShowNotification("Abandoning mission:\n" + PlayerMissions.missions[missionIndex].missionName + "\n" + repPenalty + " reputation");
-                PlayerMissions.missions[missionIndex] = null;
-                return false;
+                Mission mission = PlayerMissions.missions[missionIndex];
+                int repPenalty = -100 * (mission.goodCount - mission.GetDeliveredCount());
+                __state = "Abandoning mission:\n" + mission.missionName + "\n" + repPenalty + " reputation";
+            }
+
+            [HarmonyPostfix]
+            [HarmonyPatch("AbandonMission")]
+            public static void AbandonMissionNotificationPatch(string __state)
+            {
+                NotificationUi.instance.ShowNotification(__state);
             }
         }
     }
