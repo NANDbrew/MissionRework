@@ -56,10 +56,8 @@ namespace MissionRework
                     case MissionType.Available:
                     {
                         //MissionListUI.instance.DisablePortMissionUI();
-                        MissionListUI.instance.EnablePortMissionUI(currentPort.GetPrivateField<Mission[]>("missions"), portDude.GetPrivateField<Transform>("missionTable"), portDude);
-                        MissionListUI.instance.ChangePage(0);
+                        MissionListUI.instance.EnablePortMissionUI(currentPort.GetMissions(0, false), portDude.GetPrivateField<Transform>("missionTable"), portDude);
                         MissionListUI.instance.SetPrivateField("closeCooldown", 0f);
-                        MissionListUI.instance.InvokePrivateMethod("UpdatePageCountText");
 
                         return;
                     }
