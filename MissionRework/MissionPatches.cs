@@ -5,7 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using HarmonyLib;
 using UnityEngine;
-using SailwindModdingHelper;
+//using SailwindModdingHelper;
 using System.ComponentModel;
 using System.Net.Mail;
 //using UnityEngine.TextRenderingModule;
@@ -160,8 +160,9 @@ namespace MissionRework
             public static bool ClickButton(MissionDetailsUI __instance, ref bool ___clickable, bool ___mapZoomedIn, ref Mission ___currentMission, ref GameObject ___UI, ref TextMesh ___buttonText)
             {
                 int missionPortIndex = ___currentMission.destinationPort.portIndex;
-                List<Good> missionGoodsInArea = portLists[missionPortIndex];
                 if (GPMissionTypeButton.missionType == MissionType.Available) return true;
+                
+                List<Good> missionGoodsInArea = portLists[missionPortIndex];
 
                 if (!___mapZoomedIn && ___currentMission.missionIndex != -1)
                 {
@@ -201,11 +202,11 @@ namespace MissionRework
                             MissionListUI.instance.GetPrivateField<GameObject>("book").SetActive(false);
                             MissionListUI.instance.GetPrivateField<PortDude>("currentPortDude").ActivateMissionListUI(false);
 
-                            List<Good> list = (List<Good>)currentMarket.GetPrivateField("warehouseArea").GetPrivateField("goodsInArea");
-
-                            foreach (Good good in list) 
+                            //List<Good> list = (List<Good>)currentMarket.GetPrivateField("warehouseArea").GetPrivateField("goodsInArea");
+                            foreach (Good good in portLists[currentPortIndex]) 
                             {
-                                good.GetComponent<Rigidbody>().WakeUp();
+                                //good.GetComponent<Rigidbody>().WakeUp();
+                                good.GetComponent<ShipItem>().GetItemRigidbody().InvokePrivateMethod("SetDynamicColTimer");
                             }
                         }
                         else
