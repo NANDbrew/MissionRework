@@ -1,6 +1,6 @@
 ﻿{
     "name": "MissionRework",
-    "version_number": "1.0.2",
+    "version_number": "1.0.4",
     "website_url": "https://github.com/NANDbrew/MissionRework",
     "description": "Deliver mission goods by dropping them in the recieving area instead of directly at the port dude",
     "dependencies": [

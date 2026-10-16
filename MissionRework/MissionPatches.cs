@@ -1,14 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using HarmonyLib;
 using UnityEngine;
-//using SailwindModdingHelper;
-using System.ComponentModel;
-using System.Net.Mail;
-//using UnityEngine.TextRenderingModule;
 
 namespace MissionRework
 {
@@ -19,17 +12,15 @@ namespace MissionRework
         private static GameObject acceptCancelButton;
 
         public static int currentPortIndex;
-        public static Dictionary<int, List<Good>> portLists = new Dictionary<int, List<Good>>();
+        private static List<Good> portList;
         private static IslandMarket currentMarket;
 
-        private static List<Good> GetMissionGoods(int portIndex)
+        private static List<Good> GetMissionGoods()
         {
-            if (!portLists.TryGetValue(portIndex, out List<Good> goods))
-            {
-                goods = new List<Good>();
-                portLists.Add(portIndex, goods);
-            }
-            return goods;
+            if (portList == null) portList = new List<Good>();
+            portList.RemoveAll(good => good == null);
+
+            return portList;
         }
 
         private static int CountMissionGoods(List<Good> goods, Mission mission)
@@ -45,6 +36,7 @@ namespace MissionRework
             return count;
         }
 
+        // Disable movement controls when the menu is open. Should probably go in NANDFixes or something
         [HarmonyPatch(typeof(MissionListUI))]
         private class MissionListUIPatches
         {
@@ -85,7 +77,7 @@ namespace MissionRework
 
                 Good component = other.GetComponent<Good>();
 
-                List<Good> missionGoodsInArea = GetMissionGoods(currentPortIndex);
+                List<Good> missionGoodsInArea = GetMissionGoods();
 
                 if ((bool)component && !missionGoodsInArea.Contains(component) && component.GetMissionIndex() != -1)
                 {
@@ -101,7 +93,7 @@ namespace MissionRework
                 currentPortIndex = ___market.GetPortIndex();
                 currentMarket = ___market;
 
-                List<Good> missionGoodsInArea = GetMissionGoods(currentPortIndex);
+                List<Good> missionGoodsInArea = GetMissionGoods();
 
                 Good component = other.GetComponent<Good>();
                 if ((bool)component && missionGoodsInArea.Contains(component))
@@ -118,6 +110,7 @@ namespace MissionRework
             [HarmonyPatch("Start")]
             public static void StartPatch(MissionDetailsUI __instance, GameObject ___UI)
             {
+                // instantiate new button
                 foreach (Transform item in ___UI.transform.parent)
                 {
                     if (item.name == "current mission buttons")
@@ -165,10 +158,11 @@ namespace MissionRework
             [HarmonyPatch("ClickButton")]
             public static bool ClickButton(MissionDetailsUI __instance, ref bool ___clickable, bool ___mapZoomedIn, ref Mission ___currentMission, ref GameObject ___UI, ref TextMesh ___buttonText)
             {
-                int missionPortIndex = ___currentMission.destinationPort.portIndex;
+                // bug out if we're looking at available missions
                 if (GPMissionTypeButton.missionType == MissionType.Available) return true;
                 
-                List<Good> missionGoodsInArea = GetMissionGoods(missionPortIndex);
+                int missionPortIndex = ___currentMission.destinationPort.portIndex;
+                List<Good> missionGoodsInArea = GetMissionGoods();
 
                 if (!___mapZoomedIn && ___currentMission.missionIndex != -1)
                 {
@@ -196,22 +190,15 @@ namespace MissionRework
 
                                 MissionLog.instance.loggedMissions[0].totalRep -= num2;
                                 MissionLog.instance.UpdateTexts();
-
-                                //List<string> texts = new List<string>(MissionLog.instance.texts[0].text.Split(')'));
-                                //texts.Insert(1, "/" + ___currentMission.goodCount + ")");
-                                //MissionLog.instance.texts[0].text = string.Join("", texts);
                             }
 
                             MissionListUI.instance.RefreshList();
-                            //___currentMission = null;
                             __instance.InvokePrivateMethod("UpdateTexts");
                             MissionListUI.instance.GetPrivateField<GameObject>("book").SetActive(false);
                             MissionListUI.instance.GetPrivateField<PortDude>("currentPortDude").ActivateMissionListUI(false);
 
-                            //List<Good> list = (List<Good>)currentMarket.GetPrivateField("warehouseArea").GetPrivateField("goodsInArea");
-                            foreach (Good good in GetMissionGoods(currentPortIndex)) 
+                            foreach (Good good in GetMissionGoods()) 
                             {
-                                //good.GetComponent<Rigidbody>().WakeUp();
                                 good.GetComponent<ShipItem>().GetItemRigidbody().InvokePrivateMethod("SetDynamicColTimer");
                             }
                         }
@@ -222,9 +209,6 @@ namespace MissionRework
                             MissionListUI.instance.GetPrivateField<GameObject>("book").SetActive(false);
                             MissionListUI.instance.GetPrivateField<PortDude>("currentPortDude").ActivateMissionListUI(false);
 
-                            Debug.Log("Button Clicked!");
-
-                            //___UI.SetActive(value: false);
                         }
                     }
                     else
@@ -241,8 +225,7 @@ namespace MissionRework
             private static void UpdateTextsPatch(ref bool ___clickable, ref TextMesh ___buttonText, Mission ___currentMission, ref TextMesh ___amount)
             {
                 int missionPortIndex = ___currentMission.destinationPort.portIndex;
-                List<Good> missionGoodsInArea = GetMissionGoods(currentPortIndex);
-
+                List<Good> missionGoodsInArea = GetMissionGoods();
 
                 if (___currentMission.missionIndex != -1 && (MissionListUI.instance.GetPrivateField<PortDude>("currentPortDude") != null))
                 {
@@ -253,22 +236,20 @@ namespace MissionRework
                     {                    
                         if (currentMissionGoodsInArea > 0)
                         {
-                            if (currentMissionGoodsInArea < ___currentMission.goodCount) ___buttonText.text = "Deliver\n" + "partial (" + currentMissionGoodsInArea + ")";
-                            if (currentMissionGoodsInArea >= ___currentMission.goodCount) ___buttonText.text = "Deliver all";
+                            ___buttonText.text = "Deliver" + (currentMissionGoodsInArea >= ___currentMission.goodCount ? " all" : "\npartial ("+currentMissionGoodsInArea+")");
                             ___clickable = true;
                         }
                         else if (Main.safety.Value)
                         {
                             ___buttonText.text = "(no goods\nin area)";
                             ___clickable = false;
-                        }//return;
+                        }
                     }
                     else if (Main.safety.Value)
                     {
                         ___buttonText.text = "(wrong port)";
                         ___clickable = false;
                     }
-                    //return;
                 }
             }
         }
@@ -288,7 +269,6 @@ namespace MissionRework
                     acceptCancelButton.SetActive(true);
 
                     GPMissionTypeButton.UpdateMissions();
-                    //sortButton.GetComponent<GPMissionTypeButton>().UpdateText();
                     return false;
                 }
                 return true;
@@ -312,6 +292,8 @@ namespace MissionRework
             }
         }
 
+
+        // Fix reputation penalty notification. Should probably go in NANDFixes or something
         [HarmonyPatch(typeof(PlayerMissions))]
         private static class PlayerMissionsPatches
         {
@@ -333,14 +315,4 @@ namespace MissionRework
         }
     }
 
-
-    // cheaty testing features
-/*    [HarmonyPatch(typeof(GoPointer), "PickUpItem")]
-    internal static class BedPickupPatch
-    {
-        public static void Postfix(PickupableItem item)
-        {
-            item.big = false;
-        }
-    }*/
 }
